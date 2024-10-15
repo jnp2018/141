@@ -62,11 +62,41 @@ public class Server {
                 case "LOGIN":
                     loginUser(parts[1], parts[2]);
                     break;
+                case "VIEWSCORE":
+                    sendUserScore(parts[1]); // Gọi phương thức để gửi điểm số về cho client
+                    break;
                 default:
                     out.println("Unknown command.");
             }
         }
 
+        private void sendUserScore(String username) {
+            String sql = "SELECT gamesPlayed, gamesWon, gamesLost, score FROM Caro.dbo.Users WHERE userName = ?";
+            System.out.println("goi xong sql");
+            try (Connection conn = SQLServerConnection.getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            	System.out.println("try");
+                pstmt.setString(1, username);
+                ResultSet rs = pstmt.executeQuery();
+                
+                if (rs.next()) {
+                	System.out.println("da vao if");
+                    int gamesPlayed = rs.getInt("gamesPlayed");
+                    int gamesWon = rs.getInt("gamesWon");
+                    int gamesLost = rs.getInt("gamesLost");
+                    int totalScore = rs.getInt("score");
+                    System.out.println(gamesPlayed );
+                    // Gửi kết quả về client
+                    out.println("SCORE " + gamesPlayed + " " + gamesWon + " " + gamesLost + " " + totalScore);
+                } else {
+                    out.println("ERROR: User not found."); // Trường hợp không tìm thấy người dùng
+                }
+            } catch (SQLException e) {
+                out.println("ERROR: " + e.getMessage());
+            }
+        }
+
+        
         private void registerUser(String username, String password) {
             String sql = "INSERT INTO Users (username, password) VALUES (?, ?)";
             try (Connection conn = SQLServerConnection.getConnection();

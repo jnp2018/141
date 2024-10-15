@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.net.*;
+import java.util.Arrays;
 import java.util.prefs.Preferences;
 
 public class AuthClient extends JFrame {
@@ -83,10 +84,11 @@ public class AuthClient extends JFrame {
 
         JButton registerButton = new JButton("Register");
         registerButton.addActionListener(e -> {
-            if (passwordField.getPassword().equals(confirmPasswordField.getPassword())) {
+            // So sánh mảng char[] của mật khẩu và mật khẩu xác nhận
+            if (Arrays.equals(passwordField.getPassword(), confirmPasswordField.getPassword())) {
                 register(usernameField.getText(), new String(passwordField.getPassword()));
             } else {
-                JOptionPane.showMessageDialog(this, "Passwords do not match!");
+                JOptionPane.showMessageDialog(null, "Passwords do not match!");
             }
         });
 
@@ -111,9 +113,9 @@ public class AuthClient extends JFrame {
             out.println("LOGIN " + username + " " + passwordStr);
             String response = in.readLine();
             if (response.startsWith("LOGIN SUCCESS")) {
-                JOptionPane.showMessageDialog(this, response);
+                //JOptionPane.showMessageDialog(this, response);
                 // Tạo và hiển thị trang Home
-                Home homePanel = new Home(username, cardLayout, getContentPane());
+                Home homePanel = new Home(username, cardLayout, getContentPane(), out, in);
                 add(homePanel, "Home");
                 cardLayout.show(getContentPane(), "Home");
 
