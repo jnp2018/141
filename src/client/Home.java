@@ -38,6 +38,15 @@ public class Home extends JPanel {
         add(viewScoreButton, BorderLayout.CENTER);
 
         JButton leaderboardButton = new JButton("View Leaderboard");
+        leaderboardButton.addActionListener(e -> {
+            // Gửi yêu cầu đến server để lấy thông tin leaderboard
+            out.println("LEADERBOARD ");
+
+            // Chuyển sang trang Leaderboard
+            LeaderBoard leaderBoardPanel = new LeaderBoard(in, out, username, cardLayout, container);
+            container.add(leaderBoardPanel, "LeaderBoard");
+            cardLayout.show(container, "LeaderBoard");
+        });
         add(leaderboardButton, BorderLayout.EAST);
 
         JButton logoutButton = new JButton("Logout");

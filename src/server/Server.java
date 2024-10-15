@@ -65,27 +65,54 @@ public class Server {
                 case "VIEWSCORE":
                     sendUserScore(parts[1]); // Gọi phương thức để gửi điểm số về cho client
                     break;
+                case "LEADERBOARD":
+                    sendLeaderboard();
+                    break;
                 default:
                     out.println("Unknown command.");
             }
         }
 
-        private void sendUserScore(String username) {
+        private void sendLeaderboard() {
+            String sql = "SELECT TOP 10 userName, score FROM Caro.dbo.Users ORDER BY score DESC;";
+            
+            try (Connection conn = SQLServerConnection.getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
+            	 System.out.println("da vao try");
+                
+                StringBuilder leaderboardData = new StringBuilder("LEADERBOARD ");
+                while (rs.next()) {
+                	 System.out.println("da vao while");
+                    String userName = rs.getString("userName");
+                    int score = rs.getInt("score");
+                    leaderboardData.append(userName).append(" ").append(score).append(" ");
+                }
+                
+                // Trim the trailing space and send the leaderboard data back to the client
+                out.println(leaderboardData.toString().trim());
+                
+            } catch (SQLException e) {
+                out.println("ERROR: " + e.getMessage());
+            }
+        }
+
+		private void sendUserScore(String username) {
             String sql = "SELECT gamesPlayed, gamesWon, gamesLost, score FROM Caro.dbo.Users WHERE userName = ?";
-            System.out.println("goi xong sql");
+            //System.out.println("goi xong sql");
             try (Connection conn = SQLServerConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            	System.out.println("try");
+            //System.out.println("try");
                 pstmt.setString(1, username);
                 ResultSet rs = pstmt.executeQuery();
                 
                 if (rs.next()) {
-                	System.out.println("da vao if");
+                	//System.out.println("da vao if");
                     int gamesPlayed = rs.getInt("gamesPlayed");
                     int gamesWon = rs.getInt("gamesWon");
                     int gamesLost = rs.getInt("gamesLost");
                     int totalScore = rs.getInt("score");
-                    System.out.println(gamesPlayed );
+                    //System.out.println(gamesPlayed );
                     // Gửi kết quả về client
                     out.println("SCORE " + gamesPlayed + " " + gamesWon + " " + gamesLost + " " + totalScore);
                 } else {
