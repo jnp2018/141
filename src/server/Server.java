@@ -5,9 +5,12 @@ import database.SQLServerConnection;
 import java.io.*;
 import java.net.*;
 import java.sql.*;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Server {
     private static final int PORT = 12345;
+    private static Map<String, ClientHandler> clients = new ConcurrentHashMap<>(); // Bản đồ lưu trữ ClientHandler
 
     public static void main(String[] args) {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
@@ -26,6 +29,7 @@ public class Server {
         private Socket clientSocket;
         private PrintWriter out;
         private BufferedReader in;
+        private String userName;
 
         public ClientHandler(Socket socket) {
             this.clientSocket = socket;
@@ -62,14 +66,101 @@ public class Server {
                 case "LOGIN":
                     loginUser(parts[1], parts[2]);
                     break;
+                case "LOGOUT":
+                    logoutUser(userName);  // Truyền username vào hàm logoutUser
+                    break;
                 case "VIEWSCORE":
                     sendUserScore(parts[1]); // Gọi phương thức để gửi điểm số về cho client
                     break;
                 case "LEADERBOARD":
                     sendLeaderboard();
                     break;
+                case "INVITE":
+                    String invitedPlayer = parts[1];
+                    checkPlayerStatus(invitedPlayer, userName);  // Kiểm tra trạng thái người chơi và xử lý lời mời
+                    break;
+//                case "INVITE_ACCEPTED":
+//                    handleInviteAccepted(parts[1]); // Xử lý khi người chơi chấp nhận lời mời
+//                    break;
+//                case "INVITE_DECLINED":
+//                    handleInviteDeclined(parts[1]); // Xử lý khi người chơi từ chối lời mời
+//                    break;
                 default:
                     out.println("Unknown command.");
+            }
+        }
+
+        private void checkPlayerStatus(String invitedPlayer, String invitingPlayer) {
+            String sql = "SELECT isActive FROM Users WHERE userName = ?";
+            
+            try (Connection conn = SQLServerConnection.getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, invitedPlayer);
+                ResultSet rs = pstmt.executeQuery();
+                
+                if (rs.next()) {
+                    boolean isActive = rs.getBoolean("isActive");
+                    
+                    if (isActive) {
+                        // Người chơi đang hoạt động, gửi lời mời
+                        out.println("INVITE_SENT");
+                        notifyInvitedPlayer(invitedPlayer, invitingPlayer);
+                    } else {
+                        // Người chơi không hoạt động
+                        out.println("PLAYER_INACTIVE");
+                    }
+                } else {
+                    out.println("ERROR: Player not found.");
+                }
+            } catch (SQLException e) {
+                out.println("ERROR: " + e.getMessage());
+            }
+        }
+
+        private void notifyInvitedPlayer(String invitedPlayer, String invitingPlayer) {
+            ClientHandler invitedHandler = clients.get(invitedPlayer);
+            if (invitedHandler != null) {
+                invitedHandler.out.println("INVITE_FROM " + invitingPlayer);
+            } else {
+                out.println("ERROR: Player is not online.");
+            }
+        }
+
+//        private void handleInviteAccepted(String invitingPlayer) {
+//            out.println("INVITE_ACCEPTED " + userName);
+//            notifyInviterAboutAcceptance(userName, invitingPlayer);
+//        }
+//
+//        private void handleInviteDeclined(String invitingPlayer) {
+//            notifyInviterAboutDecline(userName, invitingPlayer);
+//        }
+
+//        private void notifyInviterAboutAcceptance(String invitedPlayer, String invitingPlayer) {
+//            ClientHandler invitingHandler = clients.get(invitingPlayer);
+//            if (invitingHandler != null) {
+//                invitingHandler.out.println("INVITE_ACCEPTED " + invitedPlayer);
+//            }
+//        }
+//
+//        private void notifyInviterAboutDecline(String invitedPlayer, String invitingPlayer) {
+//            ClientHandler invitingHandler = clients.get(invitingPlayer);
+//            if (invitingHandler != null) {
+//                invitingHandler.out.println("INVITE_DECLINED " + invitedPlayer);
+//            }
+//        }
+
+        private void logoutUser(String username) {
+            String sql = "UPDATE Users SET isActive = 0 WHERE userName = ?";
+
+            try (Connection conn = SQLServerConnection.getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+                pstmt.setString(1, username);
+                pstmt.executeUpdate();
+                clients.remove(username); // Xóa ClientHandler khỏi bản đồ
+                out.println("LOGOUT_SUCCESS");
+            } catch (SQLException e) {
+                out.println("ERROR: " + e.getMessage());
             }
         }
 
@@ -79,41 +170,31 @@ public class Server {
             try (Connection conn = SQLServerConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql);
                  ResultSet rs = pstmt.executeQuery()) {
-            	 System.out.println("da vao try");
-                
                 StringBuilder leaderboardData = new StringBuilder("LEADERBOARD ");
                 while (rs.next()) {
-                	 System.out.println("da vao while");
                     String userName = rs.getString("userName");
                     int score = rs.getInt("score");
                     leaderboardData.append(userName).append(" ").append(score).append(" ");
                 }
                 
-                // Trim the trailing space and send the leaderboard data back to the client
                 out.println(leaderboardData.toString().trim());
-                
             } catch (SQLException e) {
                 out.println("ERROR: " + e.getMessage());
             }
         }
 
-		private void sendUserScore(String username) {
+        private void sendUserScore(String username) {
             String sql = "SELECT gamesPlayed, gamesWon, gamesLost, score FROM Caro.dbo.Users WHERE userName = ?";
-            //System.out.println("goi xong sql");
             try (Connection conn = SQLServerConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            //System.out.println("try");
                 pstmt.setString(1, username);
                 ResultSet rs = pstmt.executeQuery();
                 
                 if (rs.next()) {
-                	//System.out.println("da vao if");
                     int gamesPlayed = rs.getInt("gamesPlayed");
                     int gamesWon = rs.getInt("gamesWon");
                     int gamesLost = rs.getInt("gamesLost");
                     int totalScore = rs.getInt("score");
-                    //System.out.println(gamesPlayed );
-                    // Gửi kết quả về client
                     out.println("SCORE " + gamesPlayed + " " + gamesWon + " " + gamesLost + " " + totalScore);
                 } else {
                     out.println("ERROR: User not found."); // Trường hợp không tìm thấy người dùng
@@ -123,7 +204,6 @@ public class Server {
             }
         }
 
-        
         private void registerUser(String username, String password) {
             String sql = "INSERT INTO Users (username, password) VALUES (?, ?)";
             try (Connection conn = SQLServerConnection.getConnection();
@@ -139,12 +219,22 @@ public class Server {
 
         private void loginUser(String username, String password) {
             String sql = "SELECT * FROM Users WHERE username = ? AND password = ?";
+            String updateSql = "UPDATE Users SET isActive = 1 WHERE username = ?";
+
             try (Connection conn = SQLServerConnection.getConnection();
-                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                 PreparedStatement pstmt = conn.prepareStatement(sql);
+                 PreparedStatement updatePstmt = conn.prepareStatement(updateSql)) {
+
+                // Kiểm tra thông tin đăng nhập
                 pstmt.setString(1, username);
                 pstmt.setString(2, password);
                 ResultSet rs = pstmt.executeQuery();
+
                 if (rs.next()) {
+                    this.userName = username; // Cập nhật biến userName
+                    updatePstmt.setString(1, username);
+                    updatePstmt.executeUpdate();
+                    clients.put(username, this); // Thêm ClientHandler vào bản đồ
                     out.println("LOGIN SUCCESS: " + username);
                 } else {
                     out.println("LOGIN FAILED: Invalid credentials.");
@@ -153,5 +243,9 @@ public class Server {
                 out.println("LOGIN FAILED: " + e.getMessage());
             }
         }
+
+//        private ClientHandler findClientHandlerByUsername(String username) {
+//            return clients.get(username); // Tìm ClientHandler theo username
+//        }
     }
 }

@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.PrintWriter;
 import java.io.BufferedReader;
+import java.io.IOException;
 
 public class Home extends JPanel {
     private CardLayout cardLayout;
@@ -23,6 +24,16 @@ public class Home extends JPanel {
         add(greetingLabel, BorderLayout.NORTH);
 
         JButton inviteButton = new JButton("Invite Players");
+        inviteButton.addActionListener(e -> {
+            // Tạo giao diện trang Invite Player
+            InvitePlayer invitePlayerPanel = new InvitePlayer(in, out, username, cardLayout, container);
+            
+            // Thêm trang InvitePlayer vào container
+            container.add(invitePlayerPanel, "InvitePlayer");
+            
+            // Chuyển sang trang InvitePlayer
+            cardLayout.show(container, "InvitePlayer");
+        });
         add(inviteButton, BorderLayout.WEST);
 
         JButton viewScoreButton = new JButton("View Score");
@@ -50,7 +61,27 @@ public class Home extends JPanel {
         add(leaderboardButton, BorderLayout.EAST);
 
         JButton logoutButton = new JButton("Logout");
-        logoutButton.addActionListener(e -> cardLayout.show(container, "Login"));
+        logoutButton.addActionListener(e -> {
+            // Gửi yêu cầu logout đến server
+            out.println("LOGOUT " + username);
+
+            // Tạo một thread mới để lắng nghe phản hồi từ server
+            new Thread(() -> {
+                try {
+                    String response;
+                    while ((response = in.readLine()) != null) {
+                        if (response.equals("LOGOUT_SUCCESS")) {
+                            // Sau khi nhận phản hồi đăng xuất thành công từ server
+                            // Chuyển về trang login
+                            cardLayout.show(container, "Login");
+                            break;
+                        }
+                    }
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }).start();
+        });
         add(logoutButton, BorderLayout.SOUTH);
     }
 }
