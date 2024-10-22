@@ -90,7 +90,7 @@ public class Server {
             }
         }
 
-        // kiểm tra người được mời có online hay không
+        // Kiểm tra người được mời có online hay không
         private void checkPlayerStatus(String invitedPlayer, String invitingPlayer) {
             String sql = "SELECT isActive FROM users WHERE userName = ?";
             
@@ -118,10 +118,14 @@ public class Server {
             }
         }
 
-        // gửi thông báo lời mời chơi cho B
+        // Gửi thông báo lời mời chơi cho B
         private void notifyInvitedPlayer(String invitedPlayer, String invitingPlayer) {
-            System.out.println("invite from dat");
-            out.println("INVITE_FROM " + invitingPlayer);
+            ClientHandler invitedHandler = clients.get(invitedPlayer); // Lấy ClientHandler của người được mời
+            if (invitedHandler != null) {
+                invitedHandler.out.println("INVITE_FROM " + invitingPlayer); // Gửi lời mời đến người được mời
+            } else {
+                out.println("ERROR: Player is not online."); // Người được mời không trực tuyến
+            }
         }
 
         // B chấp nhận lời mời
@@ -134,7 +138,7 @@ public class Server {
             notifyInviterAboutDecline(userName, invitingPlayer);
         }
 
-        // server phản hồi B chấp nhận A
+        // Server phản hồi B chấp nhận A
         private void notifyInviterAboutAcceptance(String invitedPlayer, String invitingPlayer) {
             ClientHandler invitingHandler = clients.get(invitingPlayer);
             if (invitingHandler != null) {
@@ -142,15 +146,15 @@ public class Server {
             }
         }
 
-        // server phản hồi B từ chối A
+        // Server phản hồi B từ chối A
         private void notifyInviterAboutDecline(String invitedPlayer, String invitingPlayer) {
             ClientHandler invitingHandler = clients.get(invitingPlayer);
             if (invitingHandler != null) {
                 invitingHandler.out.println("INVITE_DECLINED " + invitedPlayer);
             }
         }
-        //ok
-        private void logoutUser(String username) {
+
+        private synchronized void logoutUser(String username) {
             String sql = "UPDATE users SET isActive = 0 WHERE userName = ?";
             try (Connection conn = MySQLConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -163,8 +167,8 @@ public class Server {
                 out.println("ERROR: " + e.getMessage());
             }
         }
-        // ok
-        private void sendLeaderboard() {
+
+        private synchronized void sendLeaderboard() {
             String sql = "SELECT userName, score FROM users ORDER BY score DESC LIMIT 10;";
             
             try (Connection conn = MySQLConnection.getConnection();
@@ -182,8 +186,8 @@ public class Server {
                 out.println("ERROR: " + e.getMessage());
             }
         }
-        // ok
-        private void sendUserScore(String username) {
+
+        private synchronized void sendUserScore(String username) {
             String sql = "SELECT gamesPlayed, gamesWon, gamesLost, score FROM users WHERE userName = ?";
             try (Connection conn = MySQLConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -203,7 +207,7 @@ public class Server {
                 out.println("ERROR: " + e.getMessage());
             }
         }
-        // ok
+
         private void registerUser(String username, String password) {
             String sql = "INSERT INTO users (userName, password) VALUES (?, ?)";
             try (Connection conn = MySQLConnection.getConnection();
@@ -216,7 +220,7 @@ public class Server {
                 out.println("REGISTER FAILED: " + e.getMessage());
             }
         }
-        // ok
+
         private void loginUser(String username, String password) {
             String sql = "SELECT * FROM users WHERE userName = ? AND password = ?";
             String updateSql = "UPDATE users SET isActive = 1 WHERE userName = ?";
@@ -231,21 +235,17 @@ public class Server {
                 ResultSet rs = pstmt.executeQuery();
 
                 if (rs.next()) {
-                    this.userName = username; // Cập nhật biến userName
+                    this.userName = username;
+                    clients.put(username, this); // Thêm ClientHandler vào bản đồ
                     updatePstmt.setString(1, username);
                     updatePstmt.executeUpdate();
-                    clients.put(username, this); // Thêm ClientHandler vào bản đồ
-                    out.println("LOGIN SUCCESS: " + username);
+                    out.println("LOGIN SUCCESS");
                 } else {
-                    out.println("LOGIN FAILED: Invalid credentials.");
+                    out.println("LOGIN FAILED: Invalid username or password.");
                 }
             } catch (SQLException e) {
-                out.println("LOGIN FAILED: " + e.getMessage());
+                out.println("LOGIN ERROR: " + e.getMessage());
             }
-        }
-
-        private ClientHandler findClientHandlerByUsername(String username) {
-            return clients.get(username); // Tìm ClientHandler theo username
         }
     }
 }
