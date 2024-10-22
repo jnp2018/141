@@ -83,5 +83,37 @@ public class Home extends JPanel {
             }).start();
         });
         add(logoutButton, BorderLayout.SOUTH);
+        
+     // Home page - handle invitation notification and respond
+        new Thread(() -> {
+            try {
+                System.out.println("Thread started for listening to invites");
+                String response;
+                while ((response = in.readLine()) != null) {
+                    if (response.startsWith("INVITE_FROM")) {
+                        System.out.println("Invite notification received");
+                        String invitingPlayer = response.split(" ")[1];
+
+                        // Display options to accept or decline the invite
+                        int choice = JOptionPane.showConfirmDialog(this,
+                                invitingPlayer + " has invited you to a game. Do you accept?",
+                                "Game Invitation",
+                                JOptionPane.YES_NO_OPTION);
+
+                        if (choice == JOptionPane.YES_OPTION) {
+                            out.println("INVITE_ACCEPTED " + invitingPlayer);
+                            JOptionPane.showMessageDialog(this, "You accepted the invitation. Please wait for the game to start.");
+                            // Add logic to move to the game interface here
+                        } else {
+                            out.println("INVITE_DECLINED " + invitingPlayer);
+                            JOptionPane.showMessageDialog(this, "You declined the invitation.");
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+        
     }
 }

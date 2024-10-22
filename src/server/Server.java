@@ -1,6 +1,6 @@
 package server;
 
-import database.SQLServerConnection;
+import database.MySQLConnection;
 
 import java.io.*;
 import java.net.*;
@@ -79,21 +79,22 @@ public class Server {
                     String invitedPlayer = parts[1];
                     checkPlayerStatus(invitedPlayer, userName);  // Kiểm tra trạng thái người chơi và xử lý lời mời
                     break;
-//                case "INVITE_ACCEPTED":
-//                    handleInviteAccepted(parts[1]); // Xử lý khi người chơi chấp nhận lời mời
-//                    break;
-//                case "INVITE_DECLINED":
-//                    handleInviteDeclined(parts[1]); // Xử lý khi người chơi từ chối lời mời
-//                    break;
+                case "INVITE_ACCEPTED":
+                    handleInviteAccepted(parts[1]); // Xử lý khi người chơi chấp nhận lời mời
+                    break;
+                case "INVITE_DECLINED":
+                    handleInviteDeclined(parts[1]); // Xử lý khi người chơi từ chối lời mời
+                    break;
                 default:
                     out.println("Unknown command.");
             }
         }
 
+        // kiểm tra người được mời có online hay không
         private void checkPlayerStatus(String invitedPlayer, String invitingPlayer) {
-            String sql = "SELECT isActive FROM Users WHERE userName = ?";
+            String sql = "SELECT isActive FROM users WHERE userName = ?";
             
-            try (Connection conn = SQLServerConnection.getConnection();
+            try (Connection conn = MySQLConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setString(1, invitedPlayer);
                 ResultSet rs = pstmt.executeQuery();
@@ -117,42 +118,41 @@ public class Server {
             }
         }
 
+        // gửi thông báo lời mời chơi cho B
         private void notifyInvitedPlayer(String invitedPlayer, String invitingPlayer) {
-            ClientHandler invitedHandler = clients.get(invitedPlayer);
-            if (invitedHandler != null) {
-                invitedHandler.out.println("INVITE_FROM " + invitingPlayer);
-            } else {
-                out.println("ERROR: Player is not online.");
+            System.out.println("invite from dat");
+            out.println("INVITE_FROM " + invitingPlayer);
+        }
+
+        // B chấp nhận lời mời
+        private void handleInviteAccepted(String invitingPlayer) {
+            notifyInviterAboutAcceptance(userName, invitingPlayer);
+        }
+
+        // B từ chối lời mời
+        private void handleInviteDeclined(String invitingPlayer) {
+            notifyInviterAboutDecline(userName, invitingPlayer);
+        }
+
+        // server phản hồi B chấp nhận A
+        private void notifyInviterAboutAcceptance(String invitedPlayer, String invitingPlayer) {
+            ClientHandler invitingHandler = clients.get(invitingPlayer);
+            if (invitingHandler != null) {
+                invitingHandler.out.println("INVITE_ACCEPTED " + invitedPlayer);
             }
         }
 
-//        private void handleInviteAccepted(String invitingPlayer) {
-//            out.println("INVITE_ACCEPTED " + userName);
-//            notifyInviterAboutAcceptance(userName, invitingPlayer);
-//        }
-//
-//        private void handleInviteDeclined(String invitingPlayer) {
-//            notifyInviterAboutDecline(userName, invitingPlayer);
-//        }
-
-//        private void notifyInviterAboutAcceptance(String invitedPlayer, String invitingPlayer) {
-//            ClientHandler invitingHandler = clients.get(invitingPlayer);
-//            if (invitingHandler != null) {
-//                invitingHandler.out.println("INVITE_ACCEPTED " + invitedPlayer);
-//            }
-//        }
-//
-//        private void notifyInviterAboutDecline(String invitedPlayer, String invitingPlayer) {
-//            ClientHandler invitingHandler = clients.get(invitingPlayer);
-//            if (invitingHandler != null) {
-//                invitingHandler.out.println("INVITE_DECLINED " + invitedPlayer);
-//            }
-//        }
-
+        // server phản hồi B từ chối A
+        private void notifyInviterAboutDecline(String invitedPlayer, String invitingPlayer) {
+            ClientHandler invitingHandler = clients.get(invitingPlayer);
+            if (invitingHandler != null) {
+                invitingHandler.out.println("INVITE_DECLINED " + invitedPlayer);
+            }
+        }
+        //ok
         private void logoutUser(String username) {
-            String sql = "UPDATE Users SET isActive = 0 WHERE userName = ?";
-
-            try (Connection conn = SQLServerConnection.getConnection();
+            String sql = "UPDATE users SET isActive = 0 WHERE userName = ?";
+            try (Connection conn = MySQLConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
                 pstmt.setString(1, username);
@@ -163,11 +163,11 @@ public class Server {
                 out.println("ERROR: " + e.getMessage());
             }
         }
-
+        // ok
         private void sendLeaderboard() {
-            String sql = "SELECT TOP 10 userName, score FROM Caro.dbo.Users ORDER BY score DESC;";
+            String sql = "SELECT userName, score FROM users ORDER BY score DESC LIMIT 10;";
             
-            try (Connection conn = SQLServerConnection.getConnection();
+            try (Connection conn = MySQLConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql);
                  ResultSet rs = pstmt.executeQuery()) {
                 StringBuilder leaderboardData = new StringBuilder("LEADERBOARD ");
@@ -182,10 +182,10 @@ public class Server {
                 out.println("ERROR: " + e.getMessage());
             }
         }
-
+        // ok
         private void sendUserScore(String username) {
-            String sql = "SELECT gamesPlayed, gamesWon, gamesLost, score FROM Caro.dbo.Users WHERE userName = ?";
-            try (Connection conn = SQLServerConnection.getConnection();
+            String sql = "SELECT gamesPlayed, gamesWon, gamesLost, score FROM users WHERE userName = ?";
+            try (Connection conn = MySQLConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setString(1, username);
                 ResultSet rs = pstmt.executeQuery();
@@ -203,10 +203,10 @@ public class Server {
                 out.println("ERROR: " + e.getMessage());
             }
         }
-
+        // ok
         private void registerUser(String username, String password) {
-            String sql = "INSERT INTO Users (username, password) VALUES (?, ?)";
-            try (Connection conn = SQLServerConnection.getConnection();
+            String sql = "INSERT INTO users (userName, password) VALUES (?, ?)";
+            try (Connection conn = MySQLConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setString(1, username);
                 pstmt.setString(2, password);
@@ -216,12 +216,12 @@ public class Server {
                 out.println("REGISTER FAILED: " + e.getMessage());
             }
         }
-
+        // ok
         private void loginUser(String username, String password) {
-            String sql = "SELECT * FROM Users WHERE username = ? AND password = ?";
-            String updateSql = "UPDATE Users SET isActive = 1 WHERE username = ?";
+            String sql = "SELECT * FROM users WHERE userName = ? AND password = ?";
+            String updateSql = "UPDATE users SET isActive = 1 WHERE userName = ?";
 
-            try (Connection conn = SQLServerConnection.getConnection();
+            try (Connection conn = MySQLConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql);
                  PreparedStatement updatePstmt = conn.prepareStatement(updateSql)) {
 
@@ -244,8 +244,8 @@ public class Server {
             }
         }
 
-//        private ClientHandler findClientHandlerByUsername(String username) {
-//            return clients.get(username); // Tìm ClientHandler theo username
-//        }
+        private ClientHandler findClientHandlerByUsername(String username) {
+            return clients.get(username); // Tìm ClientHandler theo username
+        }
     }
 }
