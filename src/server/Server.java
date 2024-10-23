@@ -90,7 +90,7 @@ public class Server {
             }
         }
 
-        // Kiểm tra người được mời có online hay không
+        // Kiểm tra người được mời có online hay không ok
         private void checkPlayerStatus(String invitedPlayer, String invitingPlayer) {
             String sql = "SELECT isActive FROM users WHERE userName = ?";
             
@@ -105,9 +105,10 @@ public class Server {
                     if (isActive) {
                         // Người chơi đang hoạt động, gửi lời mời
                         out.println("INVITE_SENT");
+                        //System.out.println("co hoat dong");
                         notifyInvitedPlayer(invitedPlayer, invitingPlayer);
                     } else {
-                        // Người chơi không hoạt động
+                        // Người chơi không hoạt độngs
                         out.println("PLAYER_INACTIVE");
                     }
                 } else {
@@ -118,8 +119,9 @@ public class Server {
             }
         }
 
-        // Gửi thông báo lời mời chơi cho B
+        // Gửi thông báo lời mời chơi cho B ok
         private void notifyInvitedPlayer(String invitedPlayer, String invitingPlayer) {
+        	//System.out.println("da vao ham gui thong bao");
             ClientHandler invitedHandler = clients.get(invitedPlayer); // Lấy ClientHandler của người được mời
             if (invitedHandler != null) {
                 invitedHandler.out.println("INVITE_FROM " + invitingPlayer); // Gửi lời mời đến người được mời
@@ -128,17 +130,17 @@ public class Server {
             }
         }
 
-        // B chấp nhận lời mời
+        // B chấp nhận lời mời ok
         private void handleInviteAccepted(String invitingPlayer) {
             notifyInviterAboutAcceptance(userName, invitingPlayer);
         }
 
-        // B từ chối lời mời
+        // B từ chối lời mời ok
         private void handleInviteDeclined(String invitingPlayer) {
             notifyInviterAboutDecline(userName, invitingPlayer);
         }
 
-        // Server phản hồi B chấp nhận A
+        // Server phản hồi B chấp nhận A ok
         private void notifyInviterAboutAcceptance(String invitedPlayer, String invitingPlayer) {
             ClientHandler invitingHandler = clients.get(invitingPlayer);
             if (invitingHandler != null) {
