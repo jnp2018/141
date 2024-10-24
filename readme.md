@@ -2,7 +2,7 @@
 
 ## Chào mừng bạn đến với Game Cờ Caro Online – một trò chơi trí tuệ thú vị và đầy thử thách, được xây dựng hoàn toàn bằng ngôn ngữ lập trình Java. Trò chơi không chỉ giúp bạn rèn luyện tư duy mà còn mang đến những giây phút giải trí tuyệt vời khi thi đấu cùng bạn bè hoặc người chơi từ khắp nơi trên thế giới.
 
-## Tính Năng Nổi Bật:
+## Tính Năng Nổi Bật:s
 
 ### Chơi Online: Kết nối với bạn bè hoặc những người chơi khác qua Internet, trải nghiệm cảm giác cạnh tranh thực sự.
 

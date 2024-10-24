@@ -72,17 +72,26 @@ public class Home extends JPanel {
                         break;
                     case "INVITE_ACCEPTED":
                         notifyInviteAccepted(parts[1]);
-                        // Redirect to the game if the other player has accepted
-                        checkIfBothPlayersAccepted(parts[1]);
                         break;
                     case "INVITE_DECLINED":
                         notifyInviteDeclined(parts[1]);
+                        break;
+                    case "GAME_START":  // Nhận thông báo bắt đầu game từ server
+                        startGame(parts[1]);  // Phần xử lý khi game bắt đầu
                         break;
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+    
+    private void startGame(String opponent) {
+        SwingUtilities.invokeLater(() -> {
+            Game gamePanel = new Game(username, opponent);
+            container.add(gamePanel, "Game");
+            cardLayout.show(container, "Game");
+        });
     }
 
     private void showInviteDialog() {
@@ -129,8 +138,6 @@ public class Home extends JPanel {
             if (choice == JOptionPane.YES_OPTION) {
                 out.println("INVITE_ACCEPTED " + invitingPlayer);
                 JOptionPane.showMessageDialog(this, "You accepted the invitation. Please wait for the game to start.");
-                // Chuyển sang màn hình Game cho B
-               // cardLayout.show(container, "Game");
             } else {
                 out.println("INVITE_DECLINED " + invitingPlayer);
                 JOptionPane.showMessageDialog(this, "You declined the invitation.");
@@ -169,8 +176,6 @@ public class Home extends JPanel {
     private void notifyInviteAccepted(String invitedPlayer) {
         SwingUtilities.invokeLater(() -> {
             JOptionPane.showMessageDialog(this, invitedPlayer + " accepted your invite, wait a moment to start the game");
-            // Chuyển sang màn hình Game cho A
-            //cardLayout.show(container, "Game");
         });
     }
 

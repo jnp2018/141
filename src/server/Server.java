@@ -132,7 +132,19 @@ public class Server {
 
         // B chấp nhận lời mời ok
         private void handleInviteAccepted(String invitingPlayer) {
-            notifyInviterAboutAcceptance(userName, invitingPlayer);
+            notifyInviterAboutAcceptance(userName, invitingPlayer);  // Gửi phản hồi cho A
+            startGame(invitingPlayer, userName);  // Bắt đầu trận đấu
+        }
+        private void startGame(String playerA, String playerB) {
+            ClientHandler handlerA = clients.get(playerA);
+            ClientHandler handlerB = clients.get(playerB);
+
+            if (handlerA != null && handlerB != null) {
+                handlerA.out.println("GAME_START " + playerB);  // Thông báo cho A trận đấu bắt đầu
+                handlerB.out.println("GAME_START " + playerA);  // Thông báo cho B trận đấu bắt đầu
+            } else {
+                out.println("ERROR: One or both players are not online.");
+            }
         }
 
         // B từ chối lời mời ok

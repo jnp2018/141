@@ -15,7 +15,7 @@ public class Game extends JPanel {
         setLayout(new BorderLayout());
 
         // Example of adding components to the game panel
-        JLabel gameLabel = new JLabel("Game started between " + playerA + " and " + playerB, SwingConstants.CENTER);
+        JLabel gameLabel = new JLabel("Game started between you" + " and " + playerB, SwingConstants.CENTER);
         add(gameLabel, BorderLayout.NORTH);
 
         // Here you can add your game board or other components
